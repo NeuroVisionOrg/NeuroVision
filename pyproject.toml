@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neurovision-academico"
+version = "0.1.0"
+description = "NeuroVision: arquitectura y contratos para segmentación 2D académica"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "python-multipart>=0.0.9,<1",
+  "pydantic>=2.9,<3",
+  "numpy>=2.1,<3",
+  "scipy>=1.14,<2",
+  "Pillow>=11,<13",
+  "matplotlib>=3.9,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+  "httpx>=0.27,<1",
+  "ruff>=0.15,<1",
+  "mypy>=1.15,<3",
+  "import-linter>=2.6,<3",
+  "pre-commit>=4,<5",
+  "detect-secrets>=1.5,<2",
+]
+
+[tool.setuptools]
+py-modules = ["main"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+  "capa_2_control*",
+  "capa_3_traduccion*",
+  "capa_4_metodos*",
+  "capa_5_servicios*",
+  "contratos*",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [".venv", "capa_1_interfaz"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "S", "C90", "SIM", "RUF", "PL"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unreachable = true
+files = ["contratos", "capa_2_control", "capa_3_traduccion", "capa_4_metodos", "capa_5_servicios", "main.py"]
+exclude = ["^\\.venv/", "^capa_1_interfaz/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --import-mode=importlib"
+markers = ["integration: pruebas de contrato HTTP e integración entre capas"]
+
+[tool.importlinter]
+root_packages = [
+  "capa_2_control",
+  "capa_3_traduccion",
+  "capa_4_metodos",
+  "capa_5_servicios",
+  "contratos",
+]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Control coordina tres capas hermanas independientes"
+type = "layers"
+layers = [
+  "capa_2_control",
+  "capa_3_traduccion | capa_4_metodos | capa_5_servicios",
+  "contratos",
+]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Contratos compartidos no dependen de FastAPI"
+type = "forbidden"
+source_modules = ["contratos"]
+forbidden_modules = ["fastapi", "starlette"]
+
+[[tool.importlinter.contracts]]
+name = "Métodos Numéricos no conoce HTTP ni procesamiento de imágenes"
+type = "forbidden"
+source_modules = ["capa_4_metodos"]
+forbidden_modules = ["fastapi", "starlette", "PIL", "matplotlib"]

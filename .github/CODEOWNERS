@@ -1,0 +1,9 @@
+# Responsable de arquitectura y coordinación: Jherson.
+* @jhersonsanchez905-art
+
+# Agregar los usuarios GitHub reales de Johan, Yenderson y Jennifer cuando
+# confirmen sus handles. No se inventan identidades en CODEOWNERS.
+# Los revisores reales dependen de la configuración del repositorio.
+/.github/ @jhersonsanchez905-art
+/scripts/ @jhersonsanchez905-art
+/contratos/ @jhersonsanchez905-art

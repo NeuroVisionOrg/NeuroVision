@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+dist/
+coverage/
+
+# Secrets and editor files
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+
+# Temporary user files / medical data
+*.crdownload
+*.dcm
+*.nii
+*.nii.gz
+*.sql
+*.dump
+*.backup
+/data/*
+!/data/README.md

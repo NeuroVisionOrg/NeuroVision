@@ -1,0 +1,229 @@
+# CI oficial de NeuroVision: DISPARADOR EXCLUSIVAMENTE MANUAL.
+name: NeuroVision CI
+run-name: "CI PR #${{ inputs.pr_number }} | ${{ inputs.pruebas }} | @${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Numero del PR que se va a revisar
+        type: number
+        required: true
+      sha_revision:
+        description: SHA completo de 40 caracteres del HEAD revisado
+        type: string
+        required: true
+      pruebas:
+        description: Jobs que se ejecutaran
+        type: choice
+        required: true
+        default: todo
+        options:
+          - todo
+          - python
+          - frontend
+          - integracion
+          - precommit
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: neurovision-ci-pr-${{ inputs.pr_number }}
+  cancel-in-progress: true
+
+jobs:
+  validar:
+    name: Autorizar y comprobar PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    outputs:
+      base_sha: ${{ steps.pr.outputs.base_sha }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+    steps:
+      - name: Exigir operador configurado y ejecucion desde develop
+        env:
+          OPERADOR: ${{ vars.NEUROVISION_CI_OPERATOR }}
+          ACTOR: ${{ github.actor }}
+          TRIGGER: ${{ github.triggering_actor }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [[ -n "$OPERADOR" ]] || { echo 'Falta variable NEUROVISION_CI_OPERATOR'; exit 1; }
+          [[ "$ACTOR" == "$OPERADOR" && "$TRIGGER" == "$OPERADOR" ]] || {
+            echo 'Solo el operador del CI puede iniciar o repetir el workflow'
+            exit 1
+          }
+          [[ "$REF" == 'refs/heads/develop' ]] || {
+            echo 'Ejecutar la definición oficial desde develop'
+            exit 1
+          }
+
+      - name: Verificar PR, SHA, destino y estado
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          SHA_REVISION: ${{ inputs.sha_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]] || exit 1
+          [[ "$SHA_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
+            echo 'Se requiere el SHA completo y en minúsculas'
+            exit 1
+          }
+          pr="$(gh api "repos/$REPO/pulls/$PR_NUMBER")"
+          estado="$(jq -r '.state' <<< "$pr")"
+          borrador="$(jq -r '.draft' <<< "$pr")"
+          externo="$(jq -r '.head.repo.full_name != .base.repo.full_name' <<< "$pr")"
+          cabeza="$(jq -r '.head.sha' <<< "$pr")"
+          base_sha="$(jq -r '.base.sha' <<< "$pr")"
+          rama_base="$(jq -r '.base.ref' <<< "$pr")"
+          rama_origen="$(jq -r '.head.ref' <<< "$pr")"
+          [[ "$estado" == 'open' && "$borrador" == 'false' ]] || {
+            echo 'PR cerrado o borrador'
+            exit 1
+          }
+          [[ "$externo" == 'false' ]] || { echo 'PR de fork requiere otra política'; exit 1; }
+          [[ "$cabeza" == "$SHA_REVISION" ]] || { echo 'SHA de PR desactualizado'; exit 1; }
+          if [[ "$rama_base" == 'develop' ]]; then
+            [[ "$rama_origen" != 'main' ]] || exit 1
+          elif [[ "$rama_base" == 'main' ]]; then
+            [[ "$rama_origen" == 'develop' ]] || {
+              echo 'Los PR hacia main deben venir de develop'
+              exit 1
+            }
+          else
+            echo 'Destino no permitido'
+            exit 1
+          fi
+          printf 'base_sha=%s\nhead_sha=%s\n' "$base_sha" "$cabeza" >> "$GITHUB_OUTPUT"
+          printf 'PR #%s revisado contra %s\n' "$PR_NUMBER" "$rama_base" >> "$GITHUB_STEP_SUMMARY"
+
+  python:
+    name: Python, contratos y arquitectura
+    needs: validar
+    if: inputs.pruebas == 'todo' || inputs.pruebas == 'python'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Comprobar candidato
+        env:
+          EXPECTED_BASE_SHA: ${{ needs.validar.outputs.base_sha }}
+          EXPECTED_HEAD_SHA: ${{ needs.validar.outputs.head_sha }}
+        run: bash scripts/validar-candidato-ci.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install -e . --no-deps
+      - run: bash scripts/ci-local.sh python
+
+  frontend:
+    name: TypeScript, lint, Vitest y build
+    needs: validar
+    if: inputs.pruebas == 'todo' || inputs.pruebas == 'frontend'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Comprobar candidato
+        env:
+          EXPECTED_BASE_SHA: ${{ needs.validar.outputs.base_sha }}
+          EXPECTED_HEAD_SHA: ${{ needs.validar.outputs.head_sha }}
+        run: bash scripts/validar-candidato-ci.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: capa_1_interfaz/package-lock.json
+      - run: npm ci
+        working-directory: capa_1_interfaz
+      - run: bash scripts/ci-local.sh frontend
+
+  integracion:
+    name: Integración HTTP y contratos
+    needs: validar
+    if: inputs.pruebas == 'todo' || inputs.pruebas == 'integracion'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Comprobar candidato
+        env:
+          EXPECTED_BASE_SHA: ${{ needs.validar.outputs.base_sha }}
+          EXPECTED_HEAD_SHA: ${{ needs.validar.outputs.head_sha }}
+        run: bash scripts/validar-candidato-ci.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: requirements.lock
+      - run: python -m pip install -r requirements.lock
+      - run: python -m pip install -e . --no-deps
+      - run: bash scripts/ci-local.sh integracion
+
+  precommit:
+    name: Verificaciones de archivos y commits
+    needs: validar
+    if: inputs.pruebas == 'todo' || inputs.pruebas == 'precommit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Comprobar candidato
+        env:
+          EXPECTED_BASE_SHA: ${{ needs.validar.outputs.base_sha }}
+          EXPECTED_HEAD_SHA: ${{ needs.validar.outputs.head_sha }}
+        run: bash scripts/validar-candidato-ci.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Exigir linea base de secretos revisada
+        run: test -s .secrets.baseline
+      - run: python -m pip install pre-commit
+      - run: bash scripts/ci-local.sh precommit
+
+  resumen:
+    name: Resultado de validación completa
+    needs: [validar, python, frontend, integracion, precommit]
+    if: always() && inputs.pruebas == 'todo'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Exigir todas las comprobaciones correctas
+        env:
+          VALIDAR: ${{ needs.validar.result }}
+          PYTHON: ${{ needs.python.result }}
+          FRONTEND: ${{ needs.frontend.result }}
+          INTEGRACION: ${{ needs.integracion.result }}
+          PRECOMMIT: ${{ needs.precommit.result }}
+        run: |
+          set -euo pipefail
+          for estado in "$VALIDAR" "$PYTHON" "$FRONTEND" "$INTEGRACION" "$PRECOMMIT"; do
+            [[ "$estado" == 'success' ]] || {
+              echo 'No se autoriza la integración: hay jobs fallidos u omitidos'
+              exit 1
+            }
+          done
+          echo 'CI completo aprobado para este candidato de integración.'
