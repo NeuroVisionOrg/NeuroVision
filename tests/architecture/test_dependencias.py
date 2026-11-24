@@ -6,15 +6,15 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-CAPAS = frozenset({
-    "capa_2_control",
-    "capa_3_traduccion",
-    "capa_4_metodos",
-    "capa_5_servicios",
-})
-ESPECIALIZADAS = frozenset({
-    "capa_3_traduccion", "capa_4_metodos", "capa_5_servicios"
-})
+CAPAS = frozenset(
+    {
+        "capa_2_control",
+        "capa_3_traduccion",
+        "capa_4_metodos",
+        "capa_5_servicios",
+    }
+)
+ESPECIALIZADAS = frozenset({"capa_3_traduccion", "capa_4_metodos", "capa_5_servicios"})
 
 
 def importaciones_absolutas(codigo: str) -> list[str]:
@@ -57,13 +57,14 @@ def test_estructura_no_contiene_dependencias_prohibidas(origen: str) -> None:
     assert not violaciones, "Dependencias prohibidas:\n" + "\n".join(violaciones)
 
 
-@pytest.mark.parametrize("origen,importado", [
-    ("capa_4_metodos", "capa_3_traduccion.grafo"),
-    ("capa_3_traduccion", "capa_5_servicios.metricas"),
-    ("contratos", "capa_2_control.validaciones"),
-    ("capa_2_control", "capa_3_traduccion.grafo"),
-])
-def test_regla_detecta_importacion_intencionalmente_prohibida(
-    origen: str, importado: str
-) -> None:
+@pytest.mark.parametrize(
+    "origen,importado",
+    [
+        ("capa_4_metodos", "capa_3_traduccion.grafo"),
+        ("capa_3_traduccion", "capa_5_servicios.metricas"),
+        ("contratos", "capa_2_control.validaciones"),
+        ("capa_2_control", "capa_3_traduccion.grafo"),
+    ],
+)
+def test_regla_detecta_importacion_intencionalmente_prohibida(origen: str, importado: str) -> None:
     assert es_prohibida(origen, importado)

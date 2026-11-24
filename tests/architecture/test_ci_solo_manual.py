@@ -9,9 +9,9 @@ WORKFLOW = RAIZ / ".github" / "workflows" / "ci.yml"
 
 def test_ci_solo_usa_workflow_dispatch() -> None:
     contenido = WORKFLOW.read_text(encoding="utf-8")
-    disparadores = contenido.split("\non:\n", maxsplit=1)[1].split(
-        "\npermissions:\n", maxsplit=1
-    )[0]
+    disparadores = contenido.split("\non:\n", maxsplit=1)[1].split("\npermissions:\n", maxsplit=1)[
+        0
+    ]
     declarados = re.findall(r"^  ([a-z_]+):\s*$", disparadores, flags=re.MULTILINE)
     assert declarados == ["workflow_dispatch"]
 

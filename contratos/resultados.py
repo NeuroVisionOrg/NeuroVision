@@ -1,7 +1,7 @@
 """Estructuras de salida; los algoritmos y las exportaciones aún no existen."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from math import isfinite
 
 import numpy as np
@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from contratos.solver import SolverMethod
 
 
-class SolverStatus(str, Enum):
+class SolverStatus(StrEnum):
     CONVERGED = "CONVERGED"
     MAX_ITERATIONS = "MAX_ITERATIONS"
     NUMERICAL_FAILURE = "NUMERICAL_FAILURE"
@@ -47,9 +47,10 @@ class SolverResult:
             raise ValueError("el historial debe incluir el residuo inicial y cada iteración")
         if any(not isfinite(r) or r < 0 for r in self.residual_history):
             raise ValueError("el historial de residuos debe ser válido")
-        if not all(isfinite(v) and v >= 0 for v in (
-            self.initial_residual, self.final_residual, self.elapsed_seconds
-        )):
+        if not all(
+            isfinite(v) and v >= 0
+            for v in (self.initial_residual, self.final_residual, self.elapsed_seconds)
+        ):
             raise ValueError("residuos y tiempo deben ser finitos y no negativos")
         if self.initial_residual != self.residual_history[0]:
             raise ValueError("el residuo inicial no coincide con el historial")
@@ -57,9 +58,10 @@ class SolverResult:
             raise ValueError("el residuo final no coincide con el historial")
 
     def _validar_solucion(self) -> None:
-        if self.solution is not None:
-            if self.solution.ndim != 1 or self.solution.dtype != np.dtype("float64"):
-                raise ValueError("solution debe ser un vector float64")
+        if self.solution is not None and (
+            self.solution.ndim != 1 or self.solution.dtype != np.dtype("float64")
+        ):
+            raise ValueError("solution debe ser un vector float64")
         if self.status == SolverStatus.CONVERGED and self.solution is None:
             raise ValueError("una ejecución convergente debe conservar su solución")
 
