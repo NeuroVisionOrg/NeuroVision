@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
@@ -27,3 +29,9 @@ def matriz_a_imagen(matriz: NDArray[np.float32]) -> Image.Image:
 
     pixeles = np.rint(matriz * 255).astype(np.uint8)
     return Image.fromarray(pixeles)
+
+
+def leer_png_gris(ruta: Path) -> NDArray[np.float32]:
+    """Lee un archivo PNG en escala de grises de 8 bits y devuelve su matriz normalizada."""
+    with Image.open(ruta, formats=("PNG",)) as imagen:
+        return imagen_a_matriz(imagen)
