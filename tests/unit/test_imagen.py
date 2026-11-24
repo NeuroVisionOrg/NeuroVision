@@ -8,10 +8,12 @@ from contratos.imagen import ImageData, ROISelection, Seed, SeedLabel, SeedSelec
 
 
 def _semillas_validas() -> SeedSelection:
-    return SeedSelection((
-        Seed(x=34, y=25, label=SeedLabel.FOREGROUND),
-        Seed(x=22, y=12, label=SeedLabel.BACKGROUND),
-    ))
+    return SeedSelection(
+        (
+            Seed(x=34, y=25, label=SeedLabel.FOREGROUND),
+            Seed(x=22, y=12, label=SeedLabel.BACKGROUND),
+        )
+    )
 
 
 def test_imagen_deriva_dimensiones_de_matriz() -> None:
@@ -39,17 +41,21 @@ def test_roi_40x40_y_semillas_locales() -> None:
 
 def test_semillas_repetidas_se_rechazan() -> None:
     with pytest.raises(ValueError, match="repetidas"):
-        SeedSelection((
-            Seed(20, 20, SeedLabel.FOREGROUND),
-            Seed(20, 20, SeedLabel.BACKGROUND),
-        ))
+        SeedSelection(
+            (
+                Seed(20, 20, SeedLabel.FOREGROUND),
+                Seed(20, 20, SeedLabel.BACKGROUND),
+            )
+        )
 
 
 def test_semilla_fuera_de_roi_se_rechaza() -> None:
     roi = ROISelection(20, 10, 60, 50)
-    semillas = SeedSelection((
-        Seed(61, 25, SeedLabel.FOREGROUND),
-        Seed(22, 12, SeedLabel.BACKGROUND),
-    ))
+    semillas = SeedSelection(
+        (
+            Seed(61, 25, SeedLabel.FOREGROUND),
+            Seed(22, 12, SeedLabel.BACKGROUND),
+        )
+    )
     with pytest.raises(ValueError, match="fuera de la ROI"):
         validar_seleccion(120, 80, roi, semillas)

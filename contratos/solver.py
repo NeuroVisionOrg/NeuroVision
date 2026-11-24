@@ -1,14 +1,16 @@
 """Contrato de configuración para Jacobi, Gauss-Seidel, SOR y SSOR."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from math import isfinite
 
 import numpy as np
 from numpy.typing import NDArray
 
+_OMEGA_UPPER_BOUND = 2.0
 
-class SolverMethod(str, Enum):
+
+class SolverMethod(StrEnum):
     JACOBI = "jacobi"
     GAUSS_SEIDEL = "gauss_seidel"
     SOR = "sor"
@@ -42,7 +44,11 @@ class SolverConfig:
     def _validar_relajacion(self) -> None:
         relaxed = self.method in {SolverMethod.SOR, SolverMethod.SSOR}
         if relaxed:
-            if self.omega is None or not isfinite(self.omega) or not 0 < self.omega < 2:
+            if (
+                self.omega is None
+                or not isfinite(self.omega)
+                or not 0 < self.omega < _OMEGA_UPPER_BOUND
+            ):
                 raise ValueError("SOR y SSOR requieren 0 < omega < 2")
         elif self.omega is not None:
             raise ValueError("Jacobi y Gauss-Seidel no utilizan omega")

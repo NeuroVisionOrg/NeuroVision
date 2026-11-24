@@ -1,13 +1,15 @@
 """Contratos internos para imágenes, regiones de interés y semillas."""
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 import numpy as np
 from numpy.typing import NDArray
 
+_IMAGE_DIMENSIONS = 2
 
-class SeedLabel(str, Enum):
+
+class SeedLabel(StrEnum):
     """Valores conocidos para el modelo binario Random Walker."""
 
     FOREGROUND = "foreground"
@@ -23,7 +25,7 @@ class ImageData:
     normalization: str
 
     def __post_init__(self) -> None:
-        if self.pixels.ndim != 2 or not all(self.pixels.shape):
+        if self.pixels.ndim != _IMAGE_DIMENSIONS or not all(self.pixels.shape):
             raise ValueError("pixels debe ser una matriz 2D no vacía")
         if self.pixels.dtype != np.dtype("float32"):
             raise ValueError("pixels debe utilizar float32")
@@ -55,9 +57,9 @@ class ROISelection:
     y_max: int
 
     def __post_init__(self) -> None:
-        if any(type(value) is not int for value in (
-            self.x_min, self.y_min, self.x_max, self.y_max
-        )):
+        if any(
+            type(value) is not int for value in (self.x_min, self.y_min, self.x_max, self.y_max)
+        ):
             raise ValueError("las coordenadas de ROI deben ser enteros")
         if self.x_min < 0 or self.y_min < 0:
             raise ValueError("la ROI no puede tener coordenadas negativas")
