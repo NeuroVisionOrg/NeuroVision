@@ -4,8 +4,9 @@ import numpy as np
 import pytest
 from PIL import Image, UnidentifiedImageError
 
+# Las pruebas llaman al lector desde la misma entrada que usará Control.
+from capa_3_traduccion.api_publica import cargar_imagen_gris
 from capa_3_traduccion.imagenes import (
-    cargar_imagen_gris,
     imagen_a_matriz,
     leer_png_gris,
     matriz_a_imagen,
