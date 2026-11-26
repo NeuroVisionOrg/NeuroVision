@@ -1,5 +1,6 @@
-"""Límite público de esta capa.
+"""Operaciones de la capa de traducción disponibles para la capa de control."""
 
-Pendiente: publicar operaciones cuando su contrato y sus pruebas estén listos.
-No se incluye una implementación ficticia de la funcionalidad.
-"""
+from .imagenes import cargar_imagen_gris
+
+# Declara el lector como parte de la interfaz pública de esta capa.
+__all__ = ["cargar_imagen_gris"]
