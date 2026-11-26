@@ -1,6 +1,10 @@
 """Validaciones de composición que dependen de varios contratos."""
 
+from contratos.geometria import InputGeometry, InputMode, validar_forma
 from contratos.imagen import ROISelection, SeedSelection
+from contratos.volumen import ROI3DSelection, Seed3DSelection
+
+_VOLUME_DIMENSIONS = 3
 
 
 def validar_seleccion(
@@ -17,3 +21,29 @@ def validar_seleccion(
             raise ValueError("una semilla está fuera de la ROI")
     if len(semillas.seeds) >= roi.area:
         raise ValueError("no quedan píxeles desconocidos")
+
+
+def validar_seleccion_3d(
+    geometry: InputGeometry,
+    roi: ROI3DSelection,
+    semillas: Seed3DSelection,
+) -> None:
+    """Valida la selección contra la cuadrícula completa de trabajo."""
+    if geometry.mode != InputMode.THREE_D:
+        raise ValueError("se requiere geometría 3D")
+    validar_seleccion_3d_forma(geometry.work_shape, roi, semillas)
+
+
+def validar_seleccion_3d_forma(
+    work_shape: tuple[int, ...],
+    roi: ROI3DSelection,
+    semillas: Seed3DSelection,
+) -> None:
+    """Valida la seleccion respecto de una forma, sin inventar una afin."""
+    validar_forma(work_shape, _VOLUME_DIMENSIONS)
+    if any(hi > size for hi, size in zip(roi.maximum, work_shape, strict=True)):
+        raise ValueError("la ROI excede las dimensiones del volumen")
+    if any(not roi.contains(seed.position) for seed in semillas.seeds):
+        raise ValueError("una semilla está fuera de la ROI")
+    if len(semillas.seeds) >= roi.volume:
+        raise ValueError("no quedan vóxeles desconocidos")
