@@ -32,18 +32,30 @@ def importaciones_absolutas(codigo: str) -> list[str]:
 def es_prohibida(origen: str, importado: str) -> bool:
     """Aplica la matriz de dependencias de NeuroVision."""
     destino = importado.split(".", maxsplit=1)[0]
+
+    bibliotecas_3d = {
+        "nibabel": "capa_3_traduccion",
+        "skimage": "capa_5_servicios",
+    }
+
     if destino == "capa_1_interfaz":
         return True
+
+    if destino in bibliotecas_3d:
+        return origen != bibliotecas_3d[destino]
+
     if origen == "contratos":
         return destino in CAPAS or destino in {"fastapi", "starlette"}
+
     if origen in ESPECIALIZADAS:
-        if destino in CAPAS and destino != origen:
-            return True
-        if origen == "capa_4_metodos" and destino in {"fastapi", "starlette", "PIL"}:
-            return True
+        return (destino in CAPAS and destino != origen) or (
+            origen == "capa_4_metodos" and destino in {"fastapi", "starlette", "PIL", "matplotlib"}
+        )
+
     if origen == "capa_2_control" and destino in ESPECIALIZADAS:
         partes = importado.split(".")
         return len(partes) > 1 and partes[1] != "api_publica"
+
     return False
 
 
@@ -64,7 +76,32 @@ def test_estructura_no_contiene_dependencias_prohibidas(origen: str) -> None:
         ("capa_3_traduccion", "capa_5_servicios.metricas"),
         ("contratos", "capa_2_control.validaciones"),
         ("capa_2_control", "capa_3_traduccion.grafo"),
+        ("capa_4_metodos", "nibabel"),
+        ("capa_4_metodos", "skimage.measure"),
+        ("capa_4_metodos", "matplotlib.pyplot"),
+        ("contratos", "nibabel"),
+        ("contratos", "skimage"),
+        ("capa_2_control", "nibabel"),
+        ("capa_2_control", "skimage.measure"),
+        ("capa_3_traduccion", "skimage.measure"),
+        ("capa_5_servicios", "nibabel"),
     ],
 )
 def test_regla_detecta_importacion_intencionalmente_prohibida(origen: str, importado: str) -> None:
     assert es_prohibida(origen, importado)
+
+
+@pytest.mark.parametrize(
+    "origen,importado",
+    [
+        ("capa_3_traduccion", "nibabel"),
+        ("capa_5_servicios", "skimage.measure"),
+        ("capa_4_metodos", "numpy"),
+        ("capa_4_metodos", "scipy.sparse"),
+        ("capa_4_metodos", "contratos.solver"),
+        ("capa_2_control", "capa_3_traduccion.api_publica"),
+        ("capa_2_control", "capa_5_servicios.api_publica"),
+    ],
+)
+def test_regla_conserva_importacion_permitida(origen: str, importado: str) -> None:
+    assert not es_prohibida(origen, importado)

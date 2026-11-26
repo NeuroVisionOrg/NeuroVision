@@ -59,12 +59,16 @@ idna==3.20
     #   anyio
     #   httpx
     #   requests
+imageio==2.38.2
+    # via scikit-image
 import-linter==2.17
     # via neurovision-academico (pyproject.toml)
 iniconfig==2.3.1
     # via pytest
 kiwisolver==1.5.1
     # via matplotlib
+lazy-loader==0.6
+    # via scikit-image
 librt==0.17.0 ; platform_python_implementation != 'PyPy'
     # via mypy
 markdown-it-py==4.3.0
@@ -79,16 +83,24 @@ mypy-extensions==1.2.0
     # via
     #   librt
     #   mypy
+networkx==3.7
+    # via scikit-image
+nibabel==5.5.0
+    # via neurovision-academico (pyproject.toml)
 nodeenv==1.12.0
     # via pre-commit
 numpy==2.5.5
     # via
     #   neurovision-academico (pyproject.toml)
     #   contourpy
+    #   imageio
     #   matplotlib
+    #   nibabel
     #   numpy-typing-compat
     #   optype
+    #   scikit-image
     #   scipy
+    #   tifffile
 numpy-typing-compat==20260602.2.5
     # via optype
 opentelemetry-api==1.45.2
@@ -97,15 +109,20 @@ optype==0.19.0
     # via scipy-stubs
 packaging==26.4
     # via
+    #   lazy-loader
     #   matplotlib
+    #   nibabel
     #   pytest
+    #   scikit-image
     #   virtualenv
 pathspec==1.1.1
     # via mypy
 pillow==12.3.0
     # via
     #   neurovision-academico (pyproject.toml)
+    #   imageio
     #   matplotlib
+    #   scikit-image
 platformdirs==4.14.8
     # via virtualenv
 pluggy==1.7.0
@@ -142,14 +159,19 @@ rich==15.0.0
     # via import-linter
 ruff==0.17.6
     # via neurovision-academico (pyproject.toml)
+scikit-image==0.26.0
+    # via neurovision-academico (pyproject.toml)
 scipy==1.18.1
     # via
     #   neurovision-academico (pyproject.toml)
+    #   scikit-image
     #   scipy-stubs
 scipy-stubs==1.18.1.1
     # via neurovision-academico (pyproject.toml)
 starlette==1.10.0
     # via fastapi
+tifffile==2026.11.16
+    # via scikit-image
 typing-extensions==4.16.0
     # via
     #   anyio

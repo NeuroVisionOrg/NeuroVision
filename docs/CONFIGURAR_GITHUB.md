@@ -1,5 +1,7 @@
 # Creación del repositorio oficial y primer CI de NeuroVision
 
+> **Documento histórico de creación del repositorio.** El repositorio oficial ya existe, con `develop` como rama predeterminada, `main` y `develop` protegidas, lockfiles presentes y CI manual validado en los PR #1 y #2. No repetir los comandos fundacionales de `git init`, creación de ramas o primer push. El procedimiento operativo vigente se encuentra en el [README raíz](../README.md) y [CONTRIBUTING](../CONTRIBUTING.md). La revisión de membresía, CODEOWNERS y autorización de excepciones de ruleset sigue pendiente. El texto original se conserva como evidencia del procedimiento inicial.
+
 **Estado:** procedimiento acordado, **no ejecutado en GitHub**. La organización propietaria del repositorio debe ser confirmada por el equipo; no utilizar la organización de Posgrados sin autorización expresa.
 
 ## 1. Crear el repositorio público en la organización correcta
