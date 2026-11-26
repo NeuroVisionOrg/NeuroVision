@@ -1,7 +1,9 @@
 """Sistemas Random Walker 3D sintéticos para probar la capa de métodos.
 
-Este módulo es solo de apoyo para pruebas y experimentos: la construcción oficial del
-Laplaciano pertenece a la capa de traducción. Sigue ``docs/modelo_matematico.md``.
+Este módulo es solo de apoyo para pruebas: la construcción oficial del sistema pertenece a
+la capa de traducción. Sigue ``docs/modelo_matematico.md`` (secciones 2 a 4): normalización
+min-max de la ROI, 6 vecinos, pesos exp(-beta (g_i - g_j)^2) sin regularización y
+A = L_UU, b = -L_UM p_M.
 """
 
 from dataclasses import dataclass
@@ -11,8 +13,6 @@ from numpy.typing import NDArray
 from scipy.sparse import coo_array, csr_array
 
 from contratos.sistema import LinearSystem
-
-EPSILON_PESO = 1e-6
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -33,12 +33,25 @@ class CasoRandomWalker3D:
         return volumen.reshape(self.forma)
 
 
+def normalizar_min_max(volumen: NDArray[np.float32]) -> NDArray[np.float64]:
+    """Lleva la ROI a [0, 1]; si la intensidad es constante devuelve ceros."""
+    intensidad = volumen.astype(np.float64)
+    if not np.all(np.isfinite(intensidad)):
+        raise ValueError("las intensidades deben ser finitas")
+    minimo, maximo = intensidad.min(), intensidad.max()
+    if maximo == minimo:
+        return np.zeros_like(intensidad)
+    return (intensidad - minimo) / (maximo - minimo)
+
+
 def _aristas_6_vecinos(
     volumen: NDArray[np.float32], beta: float
 ) -> tuple[NDArray[np.int64], NDArray[np.int64], NDArray[np.float64]]:
     """Aristas (i, j, w) de la cuadrícula 3D con 6-conectividad."""
+    if not np.isfinite(beta) or beta < 0:
+        raise ValueError("beta debe ser finito y no negativo")
     indices = np.arange(volumen.size, dtype=np.int64).reshape(volumen.shape)
-    intensidad = volumen.astype(np.float64)
+    intensidad = normalizar_min_max(volumen)
     origenes, destinos, pesos = [], [], []
     for eje in range(3):
         delante = [slice(None)] * 3
@@ -48,8 +61,11 @@ def _aristas_6_vecinos(
         diferencia = intensidad[tuple(delante)] - intensidad[tuple(detras)]
         origenes.append(indices[tuple(detras)].ravel())
         destinos.append(indices[tuple(delante)].ravel())
-        pesos.append((np.exp(-beta * diferencia**2) + EPSILON_PESO).ravel())
-    return np.concatenate(origenes), np.concatenate(destinos), np.concatenate(pesos)
+        pesos.append(np.exp(-beta * diferencia**2).ravel())
+    w = np.concatenate(pesos)
+    if not np.all(np.isfinite(w)) or not np.all(w > 0):
+        raise ValueError("los pesos deben ser finitos y estrictamente positivos")
+    return np.concatenate(origenes), np.concatenate(destinos), w
 
 
 def laplaciano_3d(volumen: NDArray[np.float32], beta: float) -> csr_array:

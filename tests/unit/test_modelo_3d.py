@@ -7,7 +7,7 @@ from scipy.sparse.linalg import spsolve
 
 from capa_4_metodos.residuo import norma_residuo, umbral_parada
 from contratos.sistema import LinearSystem
-from tests.apoyo.sistemas_3d import caso_poisson, caso_tumor_esferico
+from tests.apoyo.sistemas_3d import caso_poisson, caso_tumor_esferico, normalizar_min_max
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +41,7 @@ def test_poisson_tiene_estencil_de_siete_puntos() -> None:
     caso = caso_poisson(4)
     a = caso.sistema.A
     assert caso.sistema.n == 64
-    np.testing.assert_allclose(a.diagonal(), 6 * (1 + 1e-6))
+    np.testing.assert_allclose(a.diagonal(), 6.0)
 
 
 def test_probabilidades_quedan_entre_cero_y_uno(caso_tumor) -> None:
@@ -52,6 +52,16 @@ def test_probabilidades_quedan_entre_cero_y_uno(caso_tumor) -> None:
     assert volumen.shape == (10, 10, 10)
     centro = volumen[5, 5, 5]
     assert centro == pytest.approx(1.0)
+
+
+def test_pesos_son_positivos_y_normalizacion_en_cero_uno() -> None:
+    volumen = np.array([[[10.0, 20.0], [30.0, 50.0]]], dtype=np.float32)
+    g = normalizar_min_max(volumen)
+    assert g.min() == 0.0
+    assert g.max() == 1.0
+    np.testing.assert_array_equal(normalizar_min_max(np.ones((2, 2, 2), np.float32)), 0.0)
+    with pytest.raises(ValueError, match="beta"):
+        caso_tumor_esferico(lado=8, beta=-1.0)
 
 
 def test_residuo_y_umbral_del_caso_base() -> None:
