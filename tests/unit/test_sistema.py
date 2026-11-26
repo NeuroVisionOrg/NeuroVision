@@ -26,3 +26,35 @@ def test_rechaza_diagonal_no_positiva() -> None:
     matriz = csr_array(np.array([[0.0, -1.0], [-1.0, 2.0]], dtype=np.float64))
     with pytest.raises(ValueError, match="diagonal"):
         LinearSystem(A=matriz, b=np.array([0.0, 1.0], dtype=np.float64))
+
+
+def test_rechaza_csr_unidimensional() -> None:
+    matriz = csr_array(np.array([1.0, 2.0], dtype=np.float64))
+    with pytest.raises(ValueError, match="dos dimensiones"):
+        LinearSystem(A=matriz, b=np.zeros(2))
+
+
+def test_rechaza_indices_fuera_del_dominio() -> None:
+    matriz = csr_array(np.eye(2, dtype=np.float64))
+    matriz.indices[0] = 2
+    with pytest.raises(ValueError, match="fuera de rango"):
+        LinearSystem(A=matriz, b=np.zeros(2))
+
+
+def test_rechaza_indptr_incoherente() -> None:
+    matriz = csr_array(np.eye(2, dtype=np.float64))
+    matriz.indptr[1] = 3
+    with pytest.raises(ValueError, match="no decreciente"):
+        LinearSystem(A=matriz, b=np.zeros(2))
+
+
+def test_rechaza_csr_no_canonica() -> None:
+    matriz = csr_array(([1.0, 1.0, 2.0], [0, 0, 1], [0, 2, 3]), shape=(2, 2))
+    with pytest.raises(ValueError, match="canónica"):
+        LinearSystem(A=matriz, b=np.zeros(2))
+
+
+def test_rechaza_valores_no_finitos() -> None:
+    matriz = csr_array(np.eye(2, dtype=np.float64))
+    with pytest.raises(ValueError, match="finitos"):
+        LinearSystem(A=matriz, b=np.array([0.0, float("nan")]))

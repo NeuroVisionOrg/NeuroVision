@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "neurovision-academico"
 version = "0.1.0"
-description = "NeuroVision: arquitectura y contratos para segmentación 2D académica"
+description = "NeuroVision: arquitectura y contratos para segmentación asistida 2D y 3D académica con SOR"
 requires-python = ">=3.13,<3.14"
 dependencies = [
   "fastapi>=0.115,<1",
@@ -16,6 +16,8 @@ dependencies = [
   "scipy>=1.14,<2",
   "Pillow>=11,<13",
   "matplotlib>=3.9,<4",
+  "nibabel==5.5.0",
+  "scikit-image==0.26.0",
 ]
 
 [project.optional-dependencies]
@@ -99,4 +101,18 @@ forbidden_modules = ["fastapi", "starlette"]
 name = "Métodos Numéricos no conoce HTTP ni procesamiento de imágenes"
 type = "forbidden"
 source_modules = ["capa_4_metodos"]
-forbidden_modules = ["fastapi", "starlette", "PIL", "matplotlib"]
+forbidden_modules = ["fastapi", "starlette", "PIL", "matplotlib", "nibabel", "skimage"]
+
+[[tool.importlinter.contracts]]
+name = "NiBabel pertenece a Traducción de Datos"
+type = "forbidden"
+source_modules = ["contratos", "capa_2_control", "capa_5_servicios"]
+forbidden_modules = ["nibabel"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "scikit-image pertenece a Servicios"
+type = "forbidden"
+source_modules = ["contratos", "capa_2_control", "capa_3_traduccion"]
+forbidden_modules = ["skimage"]
+allow_indirect_imports = true

@@ -1,109 +1,80 @@
-# NeuroVision — base de arquitectura y desarrollo (v0.2)
+# NeuroVision — segmentación asistida 2D y 3D con SOR
 
-**Prototipo académico, no clínico.** Aplicación educativa para segmentación interactiva de imágenes cerebrales 2D y comparación de Jacobi, Gauss-Seidel, SOR y SSOR sobre el mismo sistema lineal.
+**Prototipo académico, no clínico.** Aplicación web educativa para segmentación asistida de regiones tumorales en resonancias magnéticas cerebrales de intensidad escalar. El objetivo es formular sistemas lineales dispersos mediante Random Walker binario y resolverlos con una única implementación propia de sobrerrelajación sucesiva (SOR).
 
-**Estado de este paquete:** esqueleto inicial y contratos; **no es una aplicación de segmentación terminada**. El visor, la construcción Random Walker, los cuatro solucionadores, las métricas y las exportaciones están pendientes.
+**Estado:** infraestructura de desarrollo validada en los PR #1 y #2; diseño inicial actualizado al alcance 2D/3D. La integración de funcionalidades sigue pendiente. Los avances en ramas de tarea no son funcionalidades aprobadas de `develop`. Consultar el [anexo de reconciliación H1](docs/Anexo_reconciliacion_H1.md).
+
+## Alcance
+
+- 2D: cargar un corte JPEG/PNG gris, elegir ROI y semillas de primer plano/fondo, ejecutar SOR, obtener máscara y contorno.
+- 3D: cargar un volumen escalar NIfTI (formato de diseño inicial), navegar cortes axiales, definir ROI volumétrica y semillas, ejecutar el mismo SOR, reconstruir máscara y superficie 3D conservando la geometría.
+- Consultar convergencia, iteraciones/barridos, tiempo, residuo e historial; comparar configuraciones de SOR. Evaluar Dice/IoU solo con referencia compatible y exportar resultados básicos.
+- No implementar métodos adicionales, segmentación multicanal, clasificación, diagnóstico, IA, DICOM ni almacenamiento médico persistente en el MVP. Un JPG aislado no representa profundidad anatómica real.
+
+Los parámetros definitivos, límites de ROI y datos de investigación requieren validación. Las dependencias 3D se han probado localmente con datos sintéticos; consultar sus limitaciones en el [anexo de compatibilidad 3D](docs/Anexo_compatibilidad_3D.md). El profesor solicitó SOR como único método según la aclaración comunicada por el líder; el alcance 2D/3D y las decisiones de diseño se documentan en el [registro](docs/decisiones/registro.md).
 
 ## Responsabilidades y cinco capas
 
-| Carpeta | Dueño | Responsabilidad |
-| --- | --- | --- |
-| `capa_1_interfaz/` | Johan | TypeScript, Vite, Konva, visor, ROI, semillas y comparación |
-| `capa_2_control/` | Jherson | FastAPI, validaciones, coordinación y API |
-| `capa_3_traduccion/` | Yenderson | Imágenes, laplaciano, Ax=b, reconstrucción |
-| `capa_4_metodos/` | Jennifer | Jacobi, Gauss-Seidel, SOR y SSOR |
-| `capa_5_servicios/` | Yenderson | Métricas, reportes, gráficas y exportaciones |
+| Carpeta | Responsable | Responsabilidad |
+|---|---|---|
+| `capa_1_interfaz/` | Johan | Visores, ROI, semillas, configuración, comparación y presentación de resultados 2D/3D |
+| `capa_2_control/` | Jherson | API, validaciones, coordinación de casos de uso e integración |
+| `capa_3_traduccion/` | Yenderson | Lectura, normalización, geometría, grafo, sistema CSR y reconstrucción de máscaras |
+| `capa_4_metodos/` | Jennifer | SOR único, convergencia, residuos, iteraciones, tiempo y pruebas numéricas |
+| `capa_5_servicios/` | Yenderson | Mallas, métricas, gráficas y exportaciones |
 
-`contratos/` es un módulo auxiliar compartido, **no una sexta capa**. `tests/`, `docs/`, `.github/` y `scripts/` tampoco son capas funcionales.
+Control coordina las capas especializadas por sus API públicas. Traducción, Métodos y Servicios no se importan entre sí. Interfaz no ejecuta SOR. `contratos/` es un módulo auxiliar compartido, no una sexta capa. Pruebas, revisión y documentación son responsabilidades compartidas.
 
-## Requisitos del entorno
+## Entorno reproducible
 
-- Python **3.13** (`.python-version`).
-- Node.js **22** (`.nvmrc`).
-- Git, Bash y acceso a los registros de paquetes durante la instalación.
+- Python **3.13**, Node.js **22**, npm y Git Bash (o Bash en Linux/macOS).
+- Backend: FastAPI, Pydantic, Uvicorn, python-multipart, NumPy, SciPy CSR, Pillow, Matplotlib.
+- Frontend: HTML/CSS/TypeScript vanilla, Konva y Vite.
+- NiBabel 5.5.0 (Traducción), scikit-image 0.26.0 (Servicios) y Three.js 0.187.0 (Interfaz), con `@types/three` 0.187.0 en desarrollo: incorporadas en la rama H1; [evidencia local y pendientes](docs/Anexo_compatibilidad_3D.md).
 
-## Preparación del backend
+Los lockfiles de Python y npm ya existen en la base validada. No regenerarlos para una instalación normal. Desde la raíz, en Windows/Git Bash:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-# Con acceso a PyPI, generar el lockfile en un entorno controlado (uv es una herramienta de preparacion)
-uv pip compile pyproject.toml --extra dev --python-version 3.13 -o requirements.lock
+py -3.13 -m venv .venv  # solo si no existe el entorno
+source .venv/Scripts/activate
 python -m pip install -r requirements.lock
 python -m pip install -e . --no-deps
-python -m pytest -q
-uvicorn main:app --reload
-```
-
-La API implementada por ahora es solo `GET /api/v1/health`. Responde `{"service":"neurovision","status":"ok"}`. No existe aún `POST /api/v1/segmentar`.
-
-## Preparación del frontend
-
-```bash
-cd capa_1_interfaz
-npm install
-npm run dev
-```
-
-**IMPORTANTE:** el primer `npm install` con acceso al registro crea `package-lock.json`; **debe revisarse y registrarse en Git antes de usar `npm ci` o el CI oficial**. Este paquete no trae un lockfile inventado porque el registro npm no estuvo disponible en el entorno de generación.
-
-En instalaciones posteriores, usa `npm ci`. El frontend contiene únicamente una pantalla provisional de estado y una utilidad probada de conversión de coordenadas; Konva está declarado como dependencia para el desarrollo futuro.
-
-## Pruebas y calidad
-
-```bash
-python -m pytest -q
-bash scripts/ci-local.sh preflight
-bash scripts/ci-local.sh python
-bash scripts/ci-local.sh frontend
-bash scripts/ci-local.sh integracion
-bash scripts/ci-local.sh todo
-```
-
-`ci-local.sh` exige tener instaladas las dependencias de desarrollo. `todo` no omite categorías silenciosamente: falla si faltan herramientas o archivos de instalación.
-
-Antes del primer commit, con las dependencias instaladas:
-
-```bash
-detect-secrets scan > .secrets.baseline
-detect-secrets audit .secrets.baseline
+python -m pip check
+(cd capa_1_interfaz && npm ci)
 pre-commit install --hook-type pre-commit --hook-type commit-msg
 ```
 
-La configuración inicial de Python permite intervalos de versiones. Antes del CI oficial debe generarse y aprobarse `requirements.lock`; no hay un archivo de resolución inventado. La generación requiere acceso al registro y su resultado se revisa en un PR. La configuración debe probarse realmente tras obtener los paquetes.
+En Linux/macOS, usar `python3.13 -m venv .venv` y `source .venv/bin/activate`. Verificar que `python --version` y `node --version` corresponden a las versiones requeridas. Las modificaciones de dependencias se revisan con sus lockfiles en un PR.
 
-## Publicación en GitHub
+## Ejecutar la base actual
 
-La preparación de la organización, las ramas, los permisos y el primer PR se explica en [`docs/CONFIGURAR_GITHUB.md`](docs/CONFIGURAR_GITHUB.md). No se asume que la organización o el repositorio ya existan.
+```bash
+uvicorn main:app --reload
+```
 
-## CI oficial manual
+La ruta implementada de disponibilidad es `GET /api/v1/health`, que devuelve `{"service":"neurovision","status":"ok"}`. No demuestra segmentación funcional. Las operaciones de segmentación y demás DTO se especifican en [contratos.md](docs/contratos.md).
 
-El archivo `.github/workflows/ci.yml` tiene **únicamente `workflow_dispatch`**; no se ejecuta por `push` ni por `pull_request`.
+En otra terminal, desde la raíz:
 
-Para activarlo después de crear el repositorio en GitHub:
+```bash
+cd capa_1_interfaz
+npm run dev
+```
 
-1. Publica el workflow en la rama `develop`, de la que se ejecutará su definición oficial.
-2. Configura la variable de repositorio `NEUROVISION_CI_OPERATOR` con el usuario autorizado por el equipo.
-3. Genera y confirma el `package-lock.json` y un bloqueo reproducible de dependencias Python.
-4. Abre un PR; el responsable del CI introduce su número y SHA completo de 40 caracteres.
-5. Ejecuta `pruebas=todo` antes de autorizar la integración.
-6. Si cambia el HEAD del PR o la base de integración, vuelve a comprobar el candidato y repite el CI.
+## Calidad e integración
 
-El workflow debe existir también en la **rama predeterminada** del repositorio para que GitHub permita iniciarlo manualmente desde la interfaz. Se seleccionará `develop` para la ejecución oficial.
+```bash
+bash scripts/ci-local.sh todo
+```
 
-El workflow verifica que el candidato temporal de integración tenga los dos SHA examinados. **Un workflow manual no equivale automáticamente a un required status check del PR**: configurar protección de ramas y un mecanismo de autorización efectivo es una tarea pendiente que debe probarse.
+Conservar Ruff, mypy estricto, scipy-stubs, Import Linter, pytest, HTTPX, ESLint, Prettier, Vitest, pre-commit y detect-secrets. No deshabilitar controles ni regenerar la línea base de secretos indiscriminadamente para conseguir un CI verde.
 
-## Documentación
+El repositorio oficial es [NeuroVisionOrg/NeuroVision](https://github.com/NeuroVisionOrg/NeuroVision). `develop` es la rama predeterminada de trabajo; `main` se reserva para versiones estables. Ambas están protegidas. Usar ramas por tarea, Conventional Commits, PR hacia `develop` y merge commits. La promoción a `main` se hace mediante PR separado. No realizar push directo ni reescribir el historial de otras ramas.
 
-- `docs/contratos.md`: convenios y contratos compartidos.
-- `docs/modelo_matematico.md`: formulación candidata de Random Walker.
-- `docs/plan_pruebas.md`: criterios de aceptación y pruebas.
-- `docs/estandares_codigo.md`: calidad, tipado, imports y revisiones.
-- `docs/decisiones/ADR-005.md` y `ADR-006.md`: registro de decisiones.
-- `docs/pendientes.md`: elementos que no deben anunciarse como terminados.
-- `docs/CONFIGURAR_GITHUB.md`: procedimiento para crear el repositorio oficial y habilitar el CI manual.
-- `docs/VERIFICACION_INICIAL.md`: evidencia local de las 24 pruebas y bloqueos pendientes.
+El CI oficial se inicia exclusivamente mediante `workflow_dispatch` desde `develop`, por el operador autorizado (Jherson). Introducir `pr_number`, SHA completo de cabeza en `sha_revision` y `pruebas=todo`. Exigir éxito de la suite completa y revisión documentada, y verificar cabeza y base antes de integrar. Si cambia cualquiera de los SHA, repetir revisión y CI. El CI manual no constituye por sí mismo un required status check automático. Consultar [CONTRIBUTING.md](CONTRIBUTING.md) y [ADR-006](docs/decisiones/ADR-006.md).
 
-## Restricciones
+## Documentación y datos
 
-No incorporar archivos de resonancia identificables, credenciales ni datos sensibles al repositorio. Las pruebas iniciales utilizan datos sintéticos. Los cuatro métodos numéricos deben implementarse por el equipo; un solucionador externo solo puede usarse como referencia de prueba.
+El [índice técnico](docs/README.md) enlaza los siete documentos aprobados por el líder y sus anexos. Los [pendientes](docs/pendientes.md) distinguen verificaciones de infraestructura realizadas de funcionalidades todavía por construir. El registro inicial y la configuración fundacional se conservan como antecedentes.
+
+No publicar datasets médicos, imágenes o máscaras de investigación, datos identificables, archivos originales del docente, credenciales ni secretos. Usar datos sintéticos versionables; comprobar licencias y geometría antes de usar datos reales localmente. Los solucionadores externos solo pueden utilizarse como referencia en pruebas, nunca sustituir SOR en el producto.

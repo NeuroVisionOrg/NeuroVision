@@ -21,6 +21,8 @@ Cuando se cree el proyecto Jira, la forma recomendada será `test(CLAVE-123): co
 - Contratos no importan ninguna capa.
 - Mantener Ruff, mypy, ESLint, Prettier e Import Linter limpios.
 - Una modificación de contrato requiere pruebas y revisión de las capas afectadas.
+- Mantener una sola implementación propia de SOR en Métodos Numéricos para ambos modos. Interfaz no construye sistemas ni resuelve ecuaciones; Control orquesta, no implementa el solver.
+- Seguir el alcance y las rutas del [índice técnico](docs/README.md). Reconciliar las ramas anteriores mediante cambios atribuibles a sus autores, sin reescribir su historial.
 - No introducir funciones obsoletas, variables sin uso o comentarios de código muerto.
 
 ## Seguridad y datos
@@ -32,4 +34,4 @@ Cuando se cree el proyecto Jira, la forma recomendada será `test(CLAVE-123): co
 
 ## CI oficial
 
-La ejecución es exclusivamente manual mediante `workflow_dispatch`. Solo `pruebas=todo` exitoso, sobre el candidato de integración revisado y con revisión documentada, puede servir como evidencia de autorización. La revisión humana y las protecciones de GitHub son controles distintos.
+La ejecución es exclusivamente manual mediante `workflow_dispatch`. Solo `pruebas=todo` exitoso, sobre el candidato de integración revisado y con revisión documentada, puede servir como evidencia de autorización. La revisión humana y las protecciones de GitHub son controles distintos. Ejecutar desde `develop` con el operador autorizado y comprobar el SHA head y base revisados; repetir si cambian. No considerar el CI manual un required status check automático. La excepción de ruleset observada en modo PR-only requiere verificar membresía y autorización; documentar cualquier uso, sin inventar aprobaciones ni permitir push directo. CODEOWNERS definitivo y claves Jira siguen pendientes de verificación.

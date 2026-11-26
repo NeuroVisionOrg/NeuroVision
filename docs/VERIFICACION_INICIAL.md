@@ -1,5 +1,7 @@
 # Registro de verificación del esqueleto — revisión v0.2
 
+> **Registro histórico del 22 de noviembre.** Los bloqueos de instalación descritos abajo corresponden a aquella revisión y no al estado actual de `develop`. La base posterior incorporó los lockfiles y la línea base de secretos, y superó CI manual completo en los PR #1 y #2. Los nuevos componentes 2D/3D y SOR no están certificados por esas ejecuciones. Consultar [pendientes](pendientes.md) y [ADR-006](decisiones/ADR-006.md). No alterar ni reinterpretar retroactivamente los resultados iniciales.
+
 **Fecha:** 22 de noviembre de 2026. **Alcance:** entorno temporal local. No equivale a ejecutar GitHub Actions ni garantiza que los cuatro métodos funcionen.
 
 ## Comprobaciones realizadas
